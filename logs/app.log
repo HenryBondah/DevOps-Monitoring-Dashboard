@@ -1,0 +1,26 @@
+2025-10-15T00:00:00Z INFO Application started
+2025-10-15T00:01:00Z INFO Processing request id=1001
+2025-10-15T00:02:00Z WARN High memory usage detected
+2025-10-15T00:03:00Z ERROR Failed to connect to database
+2025-10-15T00:04:00Z INFO Request completed id=1001
+2025-10-15T00:05:00Z INFO Request received id=1002
+2025-10-15T00:06:00Z INFO Processing request id=1002
+2025-10-15T00:07:00Z INFO Database connection established
+2025-10-15T00:08:00Z WARN Slow query detected duration=5s
+2025-10-15T00:09:00Z INFO Request completed id=1002
+2025-10-15T00:10:00Z INFO Request received id=1003
+2025-10-15T00:11:00Z INFO Processing request id=1003
+2025-10-15T00:12:00Z ERROR Invalid input detected id=1003
+2025-10-15T00:13:00Z WARN Retrying request id=1003
+2025-10-15T00:14:00Z INFO Request completed id=1003
+2025-10-15T00:15:00Z INFO System health check passed
+2025-10-15T00:16:00Z INFO Backup process started
+2025-10-15T00:17:00Z INFO Backup process completed successfully
+2025-10-15T00:18:00Z INFO Request received id=1004
+2025-10-15T00:19:00Z INFO Processing request id=1004
+2025-10-15T00:20:00Z INFO Request completed id=1004
+2025-10-15T00:21:00Z INFO Cache cleared
+2025-10-15T00:22:00Z WARN Memory usage at 75%
+2025-10-15T00:23:00Z INFO Garbage collection completed
+2025-10-15T00:24:00Z INFO System metrics collected
+2025-10-15T00:25:00Z INFO Application running normally

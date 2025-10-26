@@ -1,0 +1,22 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/sample_app.log
+  fields:
+    log_type: application
+    service: sample_app
+
+# Route logs through Logstash for parsing
+output.logstash:
+  hosts: ["logstash:5044"]
+  
+# Keep Elasticsearch output commented for direct connection if needed
+# output.elasticsearch:
+#   hosts: ["http://elasticsearch:9200"]
+
+setup.kibana:
+  host: "http://kibana:5601"
+
+name: "docker-filebeat"
+setup.template.enabled: false

@@ -1,0 +1,86 @@
+global:
+  resolve_timeout: 5m
+  # Email configuration (update with your SMTP settings)
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'your_email@gmail.com'
+  smtp_auth_username: 'your_email@gmail.com'
+  smtp_auth_password: 'your_app_specific_password'
+  smtp_require_tls: true
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/template/*.tmpl'
+
+# Route configuration
+route:
+  # Default receiver
+  receiver: 'email-alert'
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+  
+  # Wait time before sending notification for a group of alerts
+  group_wait: 10s
+  
+  # Wait time before sending notification about new alerts in a group
+  group_interval: 10s
+  
+  # Wait time before re-sending a notification
+  repeat_interval: 3h
+  
+  # Child routes for specific alert types
+  routes:
+    # Critical alerts - send immediately
+    - match:
+        severity: critical
+      receiver: 'email-alert'
+      group_wait: 0s
+      repeat_interval: 1h
+    
+    # Warning alerts - can wait a bit
+    - match:
+        severity: warning
+      receiver: 'email-alert'
+      group_wait: 30s
+      repeat_interval: 4h
+
+# Receivers configuration
+receivers:
+  - name: 'email-alert'
+    email_configs:
+      - to: 'your_email@gmail.com'
+        send_resolved: true
+        headers:
+          Subject: '🚨 {{ .Status | toUpper }} - {{ .GroupLabels.alertname }}'
+        html: |
+          <!DOCTYPE html>
+          <html>
+          <body>
+            <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+            <p><strong>Status:</strong> {{ .Status }}</p>
+            <p><strong>Severity:</strong> {{ .GroupLabels.severity }}</p>
+            <p><strong>Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+            <h3>Alert Details:</h3>
+            {{ range .Alerts }}
+              <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <hr>
+            {{ end }}
+          </body>
+          </html>
+
+  # Slack receiver (optional - uncomment and configure if needed)
+  # - name: 'slack-alert'
+  #   slack_configs:
+  #     - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+  #       channel: '#alerts'
+  #       title: '{{ .GroupLabels.alertname }}'
+  #       text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+# Inhibition rules - prevent sending notifications for certain alerts if others are firing
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

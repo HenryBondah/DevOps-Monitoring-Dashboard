@@ -1,0 +1,119 @@
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: avg by(instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m])) * 100 > 80
+        for: 2m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%) for more than 2 minutes on {{ $labels.instance }}."
+
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 75
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}% (threshold: 75%) for more than 5 minutes on {{ $labels.instance }}."
+
+      # High Disk Usage Alert
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 85%) on {{ $labels.device }} mounted at {{ $labels.mountpoint }}."
+
+      # Low Disk Space Alert
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Available space below 15% on {{ $labels.device }} for more than 5 minutes."
+
+      # High System Load Alert
+      - alert: HighSystemLoad
+        expr: node_load1 > 5
+        for: 3m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High system load on {{ $labels.instance }}"
+          description: "1-minute load average is {{ $value | humanize }} (threshold: 5) for more than 3 minutes."
+
+      # Network Packet Drops
+      - alert: NetworkPacketDrops
+        expr: rate(node_network_receive_drop_total[2m]) > 0 or rate(node_network_transmit_drop_total[2m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "Network packet drops detected on {{ $labels.instance }}"
+          description: "Network interface {{ $labels.device }} is dropping packets on {{ $labels.instance }}."
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container High CPU Usage
+      - alert: ContainerHighCPUUsage
+        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 80
+        for: 3m
+        labels:
+          severity: warning
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} has high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value | humanize }}% for more than 3 minutes."
+
+      # Container High Memory Usage
+      - alert: ContainerHighMemoryUsage
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80
+        for: 3m
+        labels:
+          severity: warning
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} has high memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ $value | humanize }}% of limit for more than 3 minutes."
+
+  - name: service_availability
+    interval: 30s
+    rules:
+      # Service Down Alert
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+
+      # Elasticsearch Node Down
+      - alert: ElasticsearchDown
+        expr: elasticsearch_cluster_health_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Elasticsearch cluster is down"
+          description: "Elasticsearch cluster has been unreachable for more than 1 minute."

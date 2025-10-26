@@ -1,0 +1,4 @@
+2025-10-15T10:00:00Z INFO SampleApp - Starting up
+2025-10-15T10:01:00Z INFO SampleApp - Processing job id=1
+2025-10-15T10:02:00Z WARN SampleApp - Slow operation detected id=2
+2025-10-15T10:03:00Z ERROR SampleApp - Failed to process id=3: Something went wrong
