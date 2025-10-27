@@ -2,3 +2,13 @@
 2025-10-15T10:01:00Z INFO SampleApp - Processing job id=1
 2025-10-15T10:02:00Z WARN SampleApp - Slow operation detected id=2
 2025-10-15T10:03:00Z ERROR SampleApp - Failed to process id=3: Something went wrong
+2025-10-25 23:44:05 DEBUG Background job completed
+2025-10-25 23:44:05 INFO Database connection established
+2025-10-25 23:44:06 ERROR Session expired for user
+2025-10-25 23:44:06 INFO Failed to connect to external service
+2025-10-25 23:44:07 WARN Rate limit exceeded for IP 192.168.1.100
+2025-10-25 23:44:07 ERROR Memory usage at 65%
+2025-10-25 23:44:08 ERROR Cache miss for key user_123
+2025-10-25 23:44:08 DEBUG Session expired for user
+2025-10-25 23:44:09 ERROR Background job completed
+2025-10-25 23:44:10 ERROR Cache miss for key user_123
