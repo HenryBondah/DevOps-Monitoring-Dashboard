@@ -412,7 +412,7 @@
         {
           "id": "renameByRegex",
           "options": {
-            "regex": "/docker/([a-f0-9]{12}).*",
+            "regex": "^/docker/([a-f0-9]{12}).*",
             "renamePattern": "$1"
           }
         }
@@ -442,7 +442,7 @@
         {
           "id": "renameByRegex",
           "options": {
-            "regex": "/docker/([a-f0-9]{12}).*",
+            "regex": "^/docker/([a-f0-9]{12}).*",
             "renamePattern": "$1"
           }
         }
@@ -496,21 +496,22 @@
     },
     {
       "id": 16,
-      "title": "Recent Log Messages",
-      "type": "table",
+      "title": "Log Messages by Level",
+      "type": "bargauge",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 46 },
       "datasource": "Elasticsearch",
       "targets": [
         {
-          "query": "*",
           "refId": "A",
           "metrics": [
             {
+              "id": "1",
               "type": "count"
             }
           ],
           "bucketAggs": [
             {
+              "id": "2",
               "type": "terms",
               "field": "log_level.keyword",
               "settings": {
@@ -518,8 +519,17 @@
                 "order": "desc",
                 "orderBy": "_count"
               }
+            },
+            {
+              "id": "3",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "auto"
+              }
             }
           ],
+          "query": "*",
           "timeField": "@timestamp"
         }
       ],
@@ -533,26 +543,45 @@
             "mode": "absolute",
             "steps": [
               { "value": 0, "color": "green" },
-              { "value": 10, "color": "yellow" },
-              { "value": 50, "color": "red" }
+              { "value": 5, "color": "yellow" },
+              { "value": 10, "color": "red" }
             ]
           }
         }
       },
       "options": {
-        "showHeader": true
+        "orientation": "horizontal",
+        "displayMode": "gradient"
       }
     },
     {
       "id": 6,
       "title": "System Logs (Live Feed)",
       "type": "logs",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 54 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 54 },
       "datasource": "Elasticsearch",
       "targets": [
         {
-          "query": "*",
           "refId": "A",
+          "metrics": [
+            {
+              "id": "1",
+              "type": "logs"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "id": "2",
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": 0,
+                "trimEdges": 0
+              }
+            }
+          ],
+          "query": "*",
           "timeField": "@timestamp"
         }
       ],
@@ -560,7 +589,8 @@
         "showTime": true,
         "wrapLogMessage": true,
         "sortOrder": "Descending",
-        "dedupStrategy": "none"
+        "dedupStrategy": "none",
+        "enableLogDetails": true
       }
     }
   ],
