@@ -2,118 +2,315 @@ groups:
   - name: system_alerts
     interval: 30s
     rules:
-      # High CPU Usage Alert
-      - alert: HighCPUUsage
-        expr: avg by(instance) (rate(node_cpu_seconds_total{mode!="idle"}[2m])) * 100 > 80
-        for: 2m
+      # Critical CPU Usage Alert - Optimized threshold
+      - alert: CriticalCPUUsage
+        expr: avg by(instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 90
+        for: 3m
         labels:
           severity: critical
           category: system
+          impact: high
         annotations:
-          summary: "High CPU usage detected on {{ $labels.instance }}"
-          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%) for more than 2 minutes on {{ $labels.instance }}."
+          summary: "🔴 Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | printf \"%.2f\" }}% (critical threshold: 90%) for more than 3 minutes on {{ $labels.instance }}."
+          dashboard: "http://localhost:3000/d/system-metrics/system-metrics-overview-v2"
+          runbook: "Check top processes, consider scaling resources"
 
-      # High Memory Usage Alert
-      - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 75
+      # High CPU Usage Warning - Early warning
+      - alert: HighCPUUsage
+        expr: avg by(instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 75
         for: 5m
         labels:
           severity: warning
           category: system
+          impact: medium
         annotations:
-          summary: "High memory usage on {{ $labels.instance }}"
-          description: "Memory usage is {{ $value | humanize }}% (threshold: 75%) for more than 5 minutes on {{ $labels.instance }}."
+          summary: "⚠️ High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | printf \"%.2f\" }}% (warning threshold: 75%) for more than 5 minutes on {{ $labels.instance }}."
+          dashboard: "http://localhost:3000/d/system-metrics/system-metrics-overview-v2"
 
-      # High Disk Usage Alert
-      - alert: HighDiskUsage
-        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes)) * 100 > 85
-        for: 5m
-        labels:
-          severity: warning
-          category: system
-        annotations:
-          summary: "High disk usage on {{ $labels.instance }}"
-          description: "Disk usage is {{ $value | humanize }}% (threshold: 85%) on {{ $labels.device }} mounted at {{ $labels.mountpoint }}."
-
-      # Low Disk Space Alert
-      - alert: DiskSpaceLow
-        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) * 100 < 15
-        for: 5m
-        labels:
-          severity: warning
-          category: system
-        annotations:
-          summary: "Low disk space on {{ $labels.instance }}"
-          description: "Available space below 15% on {{ $labels.device }} for more than 5 minutes."
-
-      # High System Load Alert
-      - alert: HighSystemLoad
-        expr: node_load1 > 5
+      # Critical Memory Usage Alert - Optimized threshold
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
         for: 3m
         labels:
+          severity: critical
+          category: system
+          impact: high
+        annotations:
+          summary: "🔴 Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | printf \"%.2f\" }}% (critical threshold: 90%) for more than 3 minutes on {{ $labels.instance }}."
+          runbook: "Check memory-intensive processes, consider adding swap or RAM"
+
+      # High Memory Usage Warning
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
           severity: warning
           category: system
+          impact: medium
         annotations:
-          summary: "High system load on {{ $labels.instance }}"
-          description: "1-minute load average is {{ $value | humanize }} (threshold: 5) for more than 3 minutes."
+          summary: "⚠️ High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | printf \"%.2f\" }}% (warning threshold: 80%) for more than 5 minutes on {{ $labels.instance }}."
 
-      # Network Packet Drops
+      # Critical Disk Usage Alert
+      - alert: CriticalDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+          impact: high
+        annotations:
+          summary: "🔴 Critical disk usage on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value | printf \"%.2f\" }}% (critical threshold: 90%) on {{ $labels.device }} mounted at {{ $labels.mountpoint }}."
+          runbook: "Clean up logs, temporary files, or expand disk capacity immediately"
+
+      # High Disk Usage Warning
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: system
+          impact: medium
+        annotations:
+          summary: "⚠️ High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value | printf \"%.2f\" }}% (warning threshold: 85%) on {{ $labels.device }} mounted at {{ $labels.mountpoint }} for more than 10 minutes."
+
+      # Low Disk Space Alert - Absolute threshold
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} < 10 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+          impact: medium
+        annotations:
+          summary: "⚠️ Low disk space on {{ $labels.instance }}"
+          description: "Available space is {{ $value | humanize1024 }}B (< 10GB) on {{ $labels.device }} for more than 5 minutes."
+
+      # High System Load Alert - Adjusted for multi-core systems
+      - alert: HighSystemLoad
+        expr: node_load5 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+          impact: medium
+        annotations:
+          summary: "⚠️ High system load on {{ $labels.instance }}"
+          description: "5-minute load average is {{ $value | printf \"%.2f\" }}x CPU cores (threshold: 1.5x) for more than 5 minutes."
+          runbook: "Check for runaway processes or I/O bottlenecks"
+
+      # Critical System Load
+      - alert: CriticalSystemLoad
+        expr: node_load5 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 2.5
+        for: 3m
+        labels:
+          severity: critical
+          category: system
+          impact: high
+        annotations:
+          summary: "🔴 Critical system load on {{ $labels.instance }}"
+          description: "5-minute load average is {{ $value | printf \"%.2f\" }}x CPU cores (critical threshold: 2.5x) for more than 3 minutes."
+
+      # Network Packet Drops - Reduced false positives
       - alert: NetworkPacketDrops
-        expr: rate(node_network_receive_drop_total[2m]) > 0 or rate(node_network_transmit_drop_total[2m]) > 0
-        for: 2m
+        expr: rate(node_network_receive_drop_total[5m]) > 10 or rate(node_network_transmit_drop_total[5m]) > 10
+        for: 5m
         labels:
           severity: warning
           category: network
+          impact: low
         annotations:
-          summary: "Network packet drops detected on {{ $labels.instance }}"
-          description: "Network interface {{ $labels.device }} is dropping packets on {{ $labels.instance }}."
+          summary: "⚠️ Network packet drops detected on {{ $labels.instance }}"
+          description: "Network interface {{ $labels.device }} is dropping {{ $value | printf \"%.2f\" }} packets/sec on {{ $labels.instance }} for more than 5 minutes."
+          
+      # Network Interface Errors
+      - alert: NetworkInterfaceErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 10 or rate(node_network_transmit_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: network
+          impact: medium
+        annotations:
+          summary: "⚠️ Network errors on {{ $labels.instance }}"
+          description: "Network interface {{ $labels.device }} has {{ $value | printf \"%.2f\" }} errors/sec for more than 5 minutes."
 
   - name: container_alerts
     interval: 30s
     rules:
+      # Container Critical CPU Usage
+      - alert: ContainerCriticalCPUUsage
+        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 90
+        for: 3m
+        labels:
+          severity: critical
+          category: container
+          impact: high
+        annotations:
+          summary: "🔴 Container {{ $labels.name }} has critical CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value | printf \"%.2f\" }}% (critical threshold: 90%) for more than 3 minutes."
+          runbook: "Check container logs, consider resource limits or horizontal scaling"
+
       # Container High CPU Usage
       - alert: ContainerHighCPUUsage
-        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 80
-        for: 3m
+        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100 > 75
+        for: 5m
         labels:
           severity: warning
           category: container
+          impact: medium
         annotations:
-          summary: "Container {{ $labels.name }} has high CPU usage"
-          description: "Container {{ $labels.name }} CPU usage is {{ $value | humanize }}% for more than 3 minutes."
+          summary: "⚠️ Container {{ $labels.name }} has high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is {{ $value | printf \"%.2f\" }}% (warning threshold: 75%) for more than 5 minutes."
+
+      # Container Critical Memory Usage
+      - alert: ContainerCriticalMemoryUsage
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        for: 3m
+        labels:
+          severity: critical
+          category: container
+          impact: high
+        annotations:
+          summary: "🔴 Container {{ $labels.name }} has critical memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ $value | printf \"%.2f\" }}% of limit (critical threshold: 90%) for more than 3 minutes."
+          runbook: "Check for memory leaks, increase container memory limits"
 
       # Container High Memory Usage
       - alert: ContainerHighMemoryUsage
         expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80
-        for: 3m
+        for: 5m
         labels:
           severity: warning
           category: container
+          impact: medium
         annotations:
-          summary: "Container {{ $labels.name }} has high memory usage"
-          description: "Container {{ $labels.name }} memory usage is {{ $value | humanize }}% of limit for more than 3 minutes."
+          summary: "⚠️ Container {{ $labels.name }} has high memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ $value | printf \"%.2f\" }}% of limit (warning threshold: 80%) for more than 5 minutes."
+      
+      # Container Restart Detection
+      - alert: ContainerRestarting
+        expr: rate(container_last_seen{name!=""}[5m]) > 0 and on(name) (time() - container_start_time_seconds{name!=""}) < 300
+        for: 1m
+        labels:
+          severity: warning
+          category: container
+          impact: medium
+        annotations:
+          summary: "⚠️ Container {{ $labels.name }} is restarting"
+          description: "Container {{ $labels.name }} has restarted recently, may indicate instability."
 
   - name: service_availability
     interval: 30s
     rules:
-      # Service Down Alert
+      # Service Down Alert - Critical
       - alert: ServiceDown
         expr: up == 0
         for: 1m
         labels:
           severity: critical
           category: availability
+          impact: high
         annotations:
-          summary: "Service {{ $labels.job }} is down"
+          summary: "🔴 Service {{ $labels.job }} is down"
           description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+          dashboard: "http://localhost:3000/d/system-metrics/system-metrics-overview-v2"
+          runbook: "Check service logs, verify container/process status, investigate crashes"
 
-      # Elasticsearch Node Down
-      - alert: ElasticsearchDown
-        expr: elasticsearch_cluster_health_up == 0
+      # Service Flapping - Intermittent availability
+      - alert: ServiceFlapping
+        expr: changes(up[10m]) > 5
         for: 1m
+        labels:
+          severity: warning
+          category: availability
+          impact: medium
+        annotations:
+          summary: "⚠️ Service {{ $labels.job }} is flapping"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has changed state {{ $value }} times in 10 minutes."
+          runbook: "Check for resource issues, network instability, or configuration problems"
+
+      # Elasticsearch Cluster Unhealthy
+      - alert: ElasticsearchClusterUnhealthy
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 2m
         labels:
           severity: critical
           category: availability
+          impact: high
         annotations:
-          summary: "Elasticsearch cluster is down"
-          description: "Elasticsearch cluster has been unreachable for more than 1 minute."
+          summary: "🔴 Elasticsearch cluster is unhealthy"
+          description: "Elasticsearch cluster health is RED. Some indices may be unavailable."
+          runbook: "Check cluster status, verify shard allocation, investigate node failures"
+
+      # Elasticsearch Cluster Degraded
+      - alert: ElasticsearchClusterDegraded
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: availability
+          impact: medium
+        annotations:
+          summary: "⚠️ Elasticsearch cluster is degraded"
+          description: "Elasticsearch cluster health is YELLOW. Replica shards may be unassigned."
+
+  - name: performance_alerts
+    interval: 30s
+    rules:
+      # Slow Query Detection
+      - alert: SlowPrometheusQueries
+        expr: prometheus_engine_query_duration_seconds{quantile="0.9"} > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+          impact: medium
+        annotations:
+          summary: "⚠️ Slow Prometheus queries detected"
+          description: "90th percentile query duration is {{ $value | printf \"%.2f\" }}s (threshold: 5s)."
+          runbook: "Review query complexity, check data retention, consider tuning"
+
+      # High Prometheus Memory Usage
+      - alert: PrometheusHighMemory
+        expr: process_resident_memory_bytes{job="prometheus"} / 1024 / 1024 / 1024 > 4
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+          impact: medium
+        annotations:
+          summary: "⚠️ Prometheus high memory usage"
+          description: "Prometheus is using {{ $value | printf \"%.2f\" }}GB of memory (threshold: 4GB)."
+
+  - name: data_quality_alerts
+    interval: 60s
+    rules:
+      # Stale Metrics Detection
+      - alert: StaleMetrics
+        expr: time() - timestamp(up) > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: data_quality
+          impact: low
+        annotations:
+          summary: "⚠️ Stale metrics from {{ $labels.job }}"
+          description: "Metrics from {{ $labels.job }} on {{ $labels.instance }} are more than 5 minutes old."
+          
+      # Missing Scrape Targets
+      - alert: MissingScrapeTargets
+        expr: count(up) < 4
+        for: 5m
+        labels:
+          severity: warning
+          category: data_quality
+          impact: medium
+        annotations:
+          summary: "⚠️ Missing scrape targets"
+          description: "Only {{ $value }} targets are being scraped (expected: >= 4)."
